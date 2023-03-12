@@ -106,14 +106,12 @@ plot2 <- ggplot(data = p2, mapping = aes(x = NR4A1,y = peak2))+
 
 
 pdf("PANC1_ROIvsNR4A1.pdf")
-plot_grid(plot1, plot2, plot1, plot2)
-#, labels = c('A', 'B'), label_size = 12,rel_widths = 4,rel_heights = 1)
+plot_grid(plot1, plot2)
 dev.off()
 
 
 svg("PANC1_ROIvsNR4A1.svg")
-plot_grid(plot1, plot2, plot1, plot2)
-#, labels = c('A', 'B'), label_size = 12,rel_widths = 4,rel_heights = 1)
+plot_grid(plot1, plot2)
 dev.off()
 
 save.image("~/01_Projects/lncRNA_project/out/.RData")
