@@ -302,8 +302,6 @@ levels(bins) <- paste0("~",round(signif(.5*qs[-1] + .5*qs[-length(qs)],2)))
 ratios <- tapply(resLFC1$pvalue, bins, function(p) mean(p < .05, na.rm=TRUE))
 barplot(ratios, xlab="mean normalized count", ylab="ratio of small p values")
 
-#BiocManager::install("AnnotationDbi")
-#BiocManager::install("org.Hs.eg.db")
 
 library("AnnotationDbi")
 library("org.Hs.eg.db")
@@ -339,7 +337,7 @@ resOrderedDF <- as.data.frame(resOrdered)#[1:100,]
 grep(rownames(resOrderedDF),pattern="ENSG00000123358")
 grep(resOrderedDF,pattern="NR4A1")
 
-write.csv(resOrderedDF, file="ChIRP-seq_results.csv")
+write.csv(resOrderedDF, file="../results/Enrichment/ChIRP-seq_results.csv")
 
 library("ReportingTools")
 htmlRep <- HTMLReport(shortName="ChRIP-seq_report", title="H3K27ac ChIRP-seq",
@@ -361,7 +359,15 @@ nrow(signif)
 table(signif$gene.type)
 pie(table(signif$gene.type))
 
-positions <- counts[,1:5]
+
+peaks <- import.table(file="../results/diffBind/Differentially_bound_peaks_deseq2.bed",
+			sep="\t",header=FALSE,stringsAsFactors=FALSE)
+
+peak_genes <- import.table(file="../results/diffBind/Differentially_bound_peaks_anno.csv",
+			sep="\t",header=TRUE)
+
+positions <- peak_genes[,1:5]
+
 row.names(positions) <- lapply(row.names(positions),  sub, pattern = "\\.\\d+$", 
                                replacement = "")
 

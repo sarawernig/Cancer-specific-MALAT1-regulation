@@ -6,7 +6,7 @@ set -e
 
 echo "----- ChIRP-seq PIPELINE (SE) -----"
 
-project_folder="/01_Projects/lncRNA_project/ATAC-seq_HeLa_24h"
+project_folder="/01_Projects/lncRNA_project/ChIRP-seq"
 annotation="/01_Projects/genome/gencode.v27.annotation+chrR-Reversed_bin500.gtf"
 genome="/01_Projects/genome/Bowtie2_hg38+chrR-rev_index/hg38+chrR"
 fasta="/01_Projects/genome/Hg38_chrR-Reversed_bigOnly.fa"
@@ -66,6 +66,17 @@ annotatePeaks.pl $project_folder/results/MACS2/H3K27ac_IP_merged_peaks.narrowPea
 annotatePeaks.pl $project_folder/results/MACS2/H3K27ac_negIP_merged_peaks.narrowPeak hg38 \
  > $project_folder/results/MACS2/H3K27ac_negIP_merged_peaks_annotation.csv \
  -annStats $project_folder/results/MACS2/H3K27ac_negIP_merged_peaks_annotation_summary.csv
+
+echo  "$BLUE--------- Differential peak analysis ---------$RESET"
+
+Rscript $project_folder/scripts/03_ChIRP-seq_diffBind_script_IPvsNegIP.R
+
+annotatePeaks.pl $project_folder/results/diffBind/Differentially_bound_peaks_deseq2.bed hg38 \
+ > $project_folder/results/diffBind/Differentially_bound_peaks_annotation.csv \
+ -annStats $project_folder/results/diffBind/Differentially_bound_peaks_annotation_summary.csv
+
+# reannotate with custom genome
+
 
 echo  "$BLUE--------- Read quantification ---------$RESET"
 

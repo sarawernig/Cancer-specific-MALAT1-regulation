@@ -1,0 +1,218 @@
+---
+title: "ATAC-seq enrichment analysis"
+author: "Sara Wernig-Zorc"
+date: "10/02/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load environment
+
+```{r libs}
+library(ggplot2)
+library(reshape2)
+library(RColorBrewer)
+```
+
+
+# Enrichment over genomic features
+
+```{r lolipop plot: part I }
+#BiocManager::install("tidyverse")
+#install.packages("viridis")
+
+
+ATAC_genome <- read.delim2("~/01_Projects/lncRNA_project/figures/ATAC_genome_states_dataframe.txt")
+head(ATAC_genome)
+
+enrichment <- as.numeric(ATAC_genome$X24h)
+
+
+p1 <- ggplot(ATAC_genome, aes(x = reorder(Feature, -X24h), y = X24h)) +
+  geom_segment(aes(x = reorder(Feature, -X24h), xend = reorder(Feature, -X24h),
+                   y = 0, yend = X24h), color = "black", lwd = 1) +
+  geom_point(aes(size = enrichment, color = enrichment))+
+  xlab("Feature") + ylab("Enrichment over the genome") +
+  coord_flip() + labs(title = "24h post MALAT1 KD",) +
+  theme_minimal() + 
+  theme(plot.title = element_text(face ="bold", colour="black", size=16), 
+        axis.title.x = element_text(color="black", size=12),
+        axis.title.y = element_text(color="black", size=12)) + 
+  scale_color_gradient2(low="darkred", mid = "gray", high="darkgreen") +
+  scale_size(range = c(5, 15), name="Enrichment")
+
+p2 <- ggplot(ATAC_genome, aes(x = reorder(Feature, -X48h), y = X48h)) +
+  geom_segment(aes(x = reorder(Feature, -X48h), xend = reorder(Feature, -X48h),
+                   y = 0, yend = X48h), color = "black", lwd = 1) +
+  geom_point(aes(size = as.numeric(X48h), color = as.numeric(X48h))) +
+  xlab("Feature") +
+  ylab("Enrichment over the genome") +
+  coord_flip() + labs(title = "48h post MALAT1 KD",) +
+  theme_minimal() + 
+  theme(plot.title = element_text(face ="bold", colour="black", size=16), 
+        axis.title.x = element_text(color="black", size=12),
+        axis.title.y = element_text(color="black", size=12)) + 
+  scale_color_gradient2(low="darkred",  mid = "gray",high="darkgreen") +
+  scale_size(range = c(5, 15), name="Enrichment")
+
+par(mfrow=c(1,2)) 
+p1
+p2
+
+pdf("Differential_MALAT1_ATAC_peaks_24h+48h.pdf")
+par(mfrow=c(1,2)) 
+p1
+p2
+dev.off()
+```
+
+```{r lolipop plot: part II}
+
+ATAC_24h <- read.delim2("~/01_Projects/lncRNA_project/figures/ATAC_24h_genome_states_dataframe.txt")
+head(ATAC_24h)
+
+p1 <- ggplot(ATAC_24h, aes(x = reorder(Feature, -Down), y = Down)) +
+  geom_segment(aes(x = reorder(Feature, -Down), xend = reorder(Feature, -Down),
+                   y = 0, yend = Down), color = "black", lwd = 1) +
+  geom_point(aes(size = as.numeric(Down), color = as.numeric(Down))) +
+  xlab("Feature") +
+  ylab("Enrichment over the genome") +
+  coord_flip() + labs(title = "24h post MALAT1 KD: down",) +
+  theme_minimal() + 
+  theme(plot.title = element_text(face ="bold", colour="black", size=16), 
+        axis.title.x = element_text(color="black", size=12),
+        axis.title.y = element_text(color="black", size=12)) + 
+  scale_color_gradient2(low="darkred",  mid = "gray",high="darkgreen") +
+  scale_size(range = c(5, 15), name="Enrichment")
+ 
+p2 <- ggplot(ATAC_24h, aes(x = reorder(Feature, -Up), y = Up)) +
+  geom_segment(aes(x = reorder(Feature, -Up), xend = reorder(Feature, -Up),
+                   y = 0, yend = Up), color = "black", lwd = 1) +
+  geom_point(aes(size = as.numeric(Up), color = as.numeric(Up))) +
+  xlab("Feature") +
+  ylab("Enrichment over the genome") +
+  coord_flip() + labs(title = "24h post MALAT1 KD: up",) +
+  theme_minimal() + 
+  theme(plot.title = element_text(face ="bold", colour="black", size=16), 
+        axis.title.x = element_text(color="black", size=12),
+        axis.title.y = element_text(color="black", size=12)) + 
+  scale_color_gradient2(low="darkred",  mid = "gray",high="darkgreen") +
+  scale_size(range = c(5, 15), name="Enrichment")
+
+par(mfrow=c(1,2)) 
+p1
+p2
+
+pdf("Differential_MALAT1_ATAC_peaks_24h.pdf")
+par(mfrow=c(1,2)) 
+p1
+p2
+dev.off()
+
+
+ATAC_48h <- read.delim2("~/01_Projects/lncRNA_project/figures/ATAC_48h_genome_states_dataframe.txt")
+head(ATAC_48h)
+
+p1 <- ggplot(ATAC_48h, aes(x = reorder(Feature, -Down), y = Down)) +
+  geom_segment(aes(x = reorder(Feature, -Down), xend = reorder(Feature, -Down),
+                   y = 0, yend = Down), color = "black", lwd = 1) +
+  geom_point(aes(size = as.numeric(Down), color = as.numeric(Down))) +
+  xlab("Feature") +
+  ylab("Enrichment over the genome") +
+  coord_flip() + labs(title = "48h post MALAT1 KD: down",) +
+  theme_minimal() + 
+  theme(plot.title = element_text(face ="bold", colour="black", size=16), 
+        axis.title.x = element_text(color="black", size=12),
+        axis.title.y = element_text(color="black", size=12)) + 
+  scale_color_gradient2(low="darkred",  mid = "gray",high="darkgreen") +
+  scale_size(range = c(5, 15), name="Enrichment")
+ 
+p2 <- ggplot(ATAC_48h, aes(x = reorder(Feature, -Up), y = Up)) +
+  geom_segment(aes(x = reorder(Feature, -Up), xend = reorder(Feature, -Up),
+                   y = 0, yend = Up), color = "black", lwd = 1) +
+  geom_point(aes(size = as.numeric(Up), color = as.numeric(Up))) +
+  xlab("Feature") +
+  ylab("Enrichment over the genome") +
+  coord_flip() + labs(title = "48h post MALAT1 KD: up",) +
+  theme_minimal() + 
+  theme(plot.title = element_text(face ="bold", colour="black", size=16), 
+        axis.title.x = element_text(color="black", size=12),
+        axis.title.y = element_text(color="black", size=12)) + 
+  scale_color_gradient2(low="darkred",  mid = "gray",high="darkgreen") +
+  scale_size(range = c(5, 15), name="Enrichment")
+
+par(mfrow=c(1,2)) 
+p1
+p2
+
+pdf("Differential_MALAT1_ATAC_peaks_48h.pdf")
+par(mfrow=c(1,2)) 
+p1
+p2
+dev.off()
+
+```
+
+# Overlaps with RNA expression changes
+
+```{r RNA expression changes}
+overlaps_24h <- read.delim("~/01_Projects/lncRNA_project/figures/ATAC+RNA_overlaps_24h.txt")
+overlaps_48h <- read.delim("~/01_Projects/lncRNA_project/figures/ATAC+RNA_overlaps_48h.txt")
+
+### 24h ####
+
+overlaps_24h_t <- melt(overlaps_24h)
+head(overlaps_24h_t)
+
+plot.24h <- ggplot(overlaps_24h_t, aes(x = variable,
+                                    y=X, 
+                                    size=value, 
+                                    color=value, 
+                                    group=variable)) +
+  xlab("") + ylab("") + labs(title = "Overlap between accessibility and RNA expression changes",
+                             subtitle = "24h post MALAT1 knockdown") +
+  geom_point(alpha = 0.8) + theme_minimal() + 
+  theme(plot.title = element_text(face ="bold", colour="black", size=16), 
+        axis.title.x = element_text(color="black", size=12),
+        axis.title.y = element_text(color="black", size=12)) + 
+  scale_color_gradient2(low="purple",  mid = "gray",high="darkgreen") +
+  scale_size(range = c(5, 15), name="Overlap")
+
+
+### 48h ####
+
+overlaps_48h_t <- melt(overlaps_48h)
+head(overlaps_48h_t)
+
+plot.48h <- ggplot(overlaps_48h_t, aes(x = variable,
+                                    y=X, 
+                                    size=value, 
+                                    color=value, 
+                                    group=variable)) +
+  xlab("") + ylab("") + labs(title = "Overlap between accessibility and RNA expression changes",
+                             subtitle = "48h post MALAT1 knockdown") +
+  geom_point(alpha = 0.8) + theme_minimal() + 
+  theme(plot.title = element_text(face ="bold", colour="black", size=16), 
+        axis.title.x = element_text(color="black", size=12),
+        axis.title.y = element_text(color="black", size=12)) + 
+  scale_color_gradient2(low="purple",  mid = "gray",high="darkgreen") +
+  scale_size(range = c(5, 15), name="Overlap")
+
+
+## Plots
+
+par(mfrow=c(1,2)) 
+plot.24h
+plot.48h
+
+pdf("Overlap_ATAC_RNA_changes_24h+48h.pdf")
+par(mfrow=c(1,2)) 
+plot.24h
+plot.48h
+dev.off()
+
+```
+
