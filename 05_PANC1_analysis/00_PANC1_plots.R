@@ -1,7 +1,4 @@
-#Figures for manuscript Wernig-Zorc et al., 2022
-#In collaboration with Dr. Rodrigo Maldonado
-
-#BiocManager::install("edgeR")
+#!/usr/bin/env Rscript
 
 library("dplyr")
 library("ggplot2")
@@ -16,7 +13,7 @@ library("pheatmap")
 library("ComplexHeatmap")
 
 
-setwd("01_Projects/lncRNA_project/out/")
+setwd("~/01_Projects/lncRNA_project/out/")
 load("~/01_Projects/lncRNA_project/out/.RData")
 
 ######################## Scatter plot Figure 5, A #############################

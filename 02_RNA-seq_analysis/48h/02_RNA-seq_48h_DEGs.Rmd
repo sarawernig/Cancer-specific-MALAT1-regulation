@@ -1,0 +1,329 @@
+---
+title: "RNA-seq 48h analysis"
+author: "Sara Wernig-Zorc"
+date: "22/01/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,tidy = TRUE)
+
+```
+
+```{r import R packages, include=FALSE}
+library("rlang")
+library("DESeq2")
+library("GenomicFeatures")
+library("GenomicAlignments")
+library("BiocParallel")
+library("pheatmap")
+library("RColorBrewer")
+library("PoiClaClu")
+library("ggplot2")
+library("AnnotationDbi")
+library("Rsamtools")
+```
+
+```{r Import count file}
+counts <- read.table(file="../results/featureCount/readCount_gene_PE.txt",
+                       sep="\t",header=TRUE,row.names="Geneid")
+
+sample.list <- file.path("../aligned/sample.list.csv")
+coldata <- read.csv(sample.list,row.names=1, sep=",",header=TRUE)
+coldata$group <- factor(coldata$group)
+coldata$batch <- factor(coldata$batch)
+
+all(rownames(coldata) %in% colnames(counts))
+
+#select <- c(6,7,8,18,19,20)
+#counts <- counts[,select]
+
+counts <- counts[,rownames(coldata)]
+
+all(rownames(coldata) == colnames(counts))
+
+grep(rownames(counts),pattern="ENSG00000123358") #NR4A1 = ENSG00000123358
+
+dds <- DESeqDataSetFromMatrix(countData = counts,
+                              colData = coldata,
+                              design = ~ batch + group)
+
+
+nrow(dds)
+dds <- dds[ rowSums(counts(dds)) > 1, ]
+nrow(dds)
+
+
+rld <- rlog(dds, blind=FALSE)
+head(assay(rld), 3)
+
+par( mfrow = c( 1, 2 ) )
+dds <- estimateSizeFactors(dds)
+plot(log2(counts(dds, normalized=TRUE)[,1:2] + 1),
+      pch=16, cex=0.3)
+plot(assay(rld)[,1:2],
+      pch=16, cex=0.3)
+
+sampleDists <- dist( t( assay(rld) ) )
+sampleDists
+
+sampleDistMatrix <- as.matrix( sampleDists )
+rownames(sampleDistMatrix) <- paste( rld$group, rld$batch, sep="-" )
+colnames(sampleDistMatrix) <- NULL
+colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
+pheatmap(sampleDistMatrix,
+	  clustering_distance_rows=sampleDists,
+	  clustering_distance_cols=sampleDists,
+	  col=colors)
+
+poisd <- PoissonDistance(t(counts(dds)))
+
+samplePoisDistMatrix <- as.matrix( poisd$dd )
+rownames(samplePoisDistMatrix) <- paste( rld$group, rld$batch, sep="-" )
+colnames(samplePoisDistMatrix) <- NULL
+pheatmap(samplePoisDistMatrix,
+	  clustering_distance_rows=poisd$dd,
+	  clustering_distance_cols=poisd$dd,
+	  col=colors)
+
+plotPCA(rld, intgroup = c("group", "batch"))
+
+(pcadata <- plotPCA(rld, intgroup = c( "group", "batch"), returnData=TRUE))
+
+percentVar <- round(100 * attr(pcadata, "percentVar"))
+ggplot(pcadata, aes(PC1, PC2, color=group, shape=batch)) +   geom_point(size=3) +
+   xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+   ylab(paste0("PC2: ",percentVar[2],"% variance"))
+
+
+mdsData <- data.frame(cmdscale(sampleDistMatrix))
+mds <- cbind(mdsData, as.data.frame(colData(rld)))
+ggplot(mds, aes(X1,X2,color=group,shape=batch)) + geom_point(size=3)
+
+mdsPoisData <- data.frame(cmdscale(samplePoisDistMatrix))
+mdsPois <- cbind(mdsPoisData, as.data.frame(colData(dds)))
+ggplot(mdsPois, aes(X1,X2,color=group,shape=batch)) + geom_point(size=3)
+
+#DE analysis
+dds <- DESeq(dds)
+(res <- results(dds))
+mcols(res, use.names=TRUE)
+summary(res)
+res.05 <- results(dds, alpha=.05)
+table(res.05$padj < .05)
+
+resLFC1 <- results(dds, lfcThreshold=1)
+table(resLFC1$padj < 0.1)
+
+sum(res$pvalue < 0.05, na.rm=TRUE)
+sum(!is.na(res$pvalue))
+
+resSig <- subset(res, padj < 0.1)
+nrow(resSig)
+
+grep(rownames(resSig),pattern="ENSG00000123358")
+
+head(resSig[ order(resSig$log2FoldChange), ])
+head(resSig[ order(resSig$log2FoldChange, decreasing=TRUE), ])
+
+topGene <- rownames(res)[which.min(res$padj)]
+NR4A1 <- "ENSG00000123358.19"
+plotCounts(dds, gene=topGene, intgroup=c("group"))
+plotCounts(dds, gene=NR4A1, intgroup=c("group"))
+
+
+
+FIRRE <- "ENSG00000213468.5"
+plotCounts(dds, gene=FIRRE, intgroup=c("group"),main = "FIRRE lncRNA")
+
+TARID <- "ENSG00000227954.6"
+plotCounts(dds, gene=TARID, intgroup=c("group"),main = "TARID lncRNA")
+
+NEAT1 <- "ENSG00000245532.7"
+plotCounts(dds, gene=TARID, intgroup=c("group"),main = "NEAT1 lncRNA")
+
+MALAT1 <- "ENSG00000251562.7"
+plotCounts(dds, gene=TARID, intgroup=c("group"),main = "MALAT1 lncRNA")
+
+ATG101 <- "ENSG00000123395.14"
+plotCounts(dds, gene=TARID, intgroup=c("group"),main = "ATG101 RNA")
+
+BRG1 <- "ENSG00000127616.17"
+plotCounts(dds, gene=TARID, intgroup=c("group"),main = "BRG1 RNA")
+
+AFF4 <- "ENSG00000072364.12"
+plotCounts(dds, gene=TARID, intgroup=c("group"),main = "AFF4 RNA")
+
+ELL2 <- "ENSG00000118985.15"
+plotCounts(dds, gene=TARID, intgroup=c("group"),main = "ELL2 RNA")
+
+
+#MALAT1
+geneCounts <- plotCounts(dds, gene=topGene, intgroup=c("group","batch"), returnData=TRUE)
+ggplot(geneCounts, aes(x=group, y=count, color=batch)) +
+  scale_y_log10() +
+  geom_point(position=position_jitter(width=.1,height=0), size=3)
+
+ggplot(geneCounts, aes(x=group, y=count, fill=group)) +
+  scale_y_log10() + geom_dotplot(binaxis="y", stackdir="center")
+
+ggplot(geneCounts, aes(x=group, y=count, color=group, group=group)) +
+  scale_y_log10() + geom_point(size=3) + geom_line()
+
+
+pdf("RNA-seq_48h_MALAT1_boxplot_v1.pdf")
+par(mfrow=c(1,2)) 
+ggplot(geneCounts, aes(x=group, y=count, color=group, group=group)) +
+  scale_y_log10() + geom_boxplot(outlier.colour="black", outlier.shape=16,
+             outlier.size=2, notch=FALSE) + theme_minimal()
+
+ggplot(geneCounts, aes(x=group, y=count, color=group, group=group))+
+  scale_y_log10() + geom_boxplot(outlier.colour="black", outlier.shape=16,
+             outlier.size=2, notch=FALSE) 
+dev.off()
+
+#NR4A1
+geneCounts <- plotCounts(dds, gene=NR4A1, intgroup=c("group","batch"), returnData=TRUE)
+
+pdf("RNA-seq_48h_NR4A1_boxplot_v1.pdf")
+par(mfrow=c(1,2)) 
+ggplot(geneCounts, aes(x=group, y=count, color=group, group=group)) +
+  scale_y_log10() + geom_boxplot(outlier.colour="black", outlier.shape=16,
+             outlier.size=2, notch=FALSE) + theme_minimal()
+
+ggplot(geneCounts, aes(x=group, y=count, color=group, group=group)) +
+  scale_y_log10() + geom_boxplot(outlier.colour="black", outlier.shape=16,
+             outlier.size=2, notch=FALSE) 
+dev.off()
+
+
+#MA plot
+
+plotMA(resLFC1, ylim=c(-8,8))
+plotMA(res, ylim=c(-8,8))
+
+hist(res$pvalue[res$baseMean > 1], breaks=0:20/20, col="grey50", border="white")
+
+# Log fold change shrinkage for visualization and ranking
+
+resultsNames(dds)
+
+resLFC <- lfcShrink(dds, coef="group_MALAT1_vs_CTRL", type="apeglm")
+resLFC
+
+plotMA(resLFC, ylim=c(-7,9))
+with(resLFC[topGene, ], {
+  points(baseMean, log2FoldChange, col="green", cex=1, lwd=2)
+  text(baseMean, log2FoldChange, "MALAT1", pos=2, col="green")
+})
+with(resLFC[NR4A1, ], {
+  points(baseMean, log2FoldChange, col="lightblue", cex=1, lwd=2)
+  text(baseMean, log2FoldChange, "NR4A1", pos=2, col="lightblue")
+})
+with(resLFC[ATG101,],{
+  points(baseMean, log2FoldChange, col="pink", cex=1, lwd=2)
+  text(baseMean, log2FoldChange, "ATG101", pos=2, col="pink")
+})
+with(resLFC[BRG1,],{
+  points(baseMean, log2FoldChange, col="orange", cex=1, lwd=2)
+  text(baseMean, log2FoldChange, "BRG1", pos=2, col="orange")
+})
+with(resLFC[AFF4,],{
+  points(baseMean, log2FoldChange, col="purple", cex=1, lwd=2)
+  text(baseMean, log2FoldChange, "AFF4", pos=2, col="purple")
+})
+with(resLFC[ELL2,],{
+  points(baseMean, log2FoldChange, col="red", cex=1, lwd=2)
+  text(baseMean, log2FoldChange, "ELL2", pos=2, col="red")
+})
+
+
+pdf("RNA-seq_48h_MAplot.pdf")
+plotMA(resLFC, ylim=c(-7,9))
+with(resLFC[topGene, ], {
+  points(baseMean, log2FoldChange, col="green", cex=1, lwd=2)
+  text(baseMean, log2FoldChange, "MALAT1", pos=2, col="green")
+})
+with(resLFC[NR4A1, ], {
+  points(baseMean, log2FoldChange, col="lightblue", cex=1, lwd=2)
+  text(baseMean, log2FoldChange, "NR4A1", pos=2, col="lightblue")
+})
+with(resLFC[ATG101,],{
+  points(baseMean, log2FoldChange, col="pink", cex=1, lwd=2)
+  text(baseMean, log2FoldChange, "ATG101", pos=2, col="pink")
+})
+with(resLFC[BRG1,],{
+  points(baseMean, log2FoldChange, col="orange", cex=1, lwd=2)
+  text(baseMean, log2FoldChange, "BRG1", pos=2, col="orange")
+})
+with(resLFC[AFF4,],{
+  points(baseMean, log2FoldChange, col="purple", cex=1, lwd=2)
+  text(baseMean, log2FoldChange, "AFF4", pos=2, col="purple")
+})
+with(resLFC[ELL2,],{
+  points(baseMean, log2FoldChange, col="red", cex=1, lwd=2)
+  text(baseMean, log2FoldChange, "ELL2", pos=2, col="red")
+})
+dev.off()
+
+save(dds,file = "RNA-seq_48h_dds_object.RData")
+```
+
+```{r DEGs}
+library("genefilter")
+topVarGenes <- head(order(rowVars(assay(rld)),decreasing=TRUE),20)
+
+mat <- assay(rld)[ topVarGenes, ]
+mat <- mat - rowMeans(mat)
+df <- as.data.frame(colData(rld)[,c("batch","group")])
+pheatmap(mat, annotation_col=df)
+
+qs <- c(0, quantile(resLFC1$baseMean[resLFC1$baseMean > 0], 0:6/6))
+bins <- cut(resLFC1$baseMean, qs) 
+levels(bins) <- paste0("~",round(signif(.5*qs[-1] + .5*qs[-length(qs)],2)))
+ratios <- tapply(resLFC1$pvalue, bins, function(p) mean(p < .05, na.rm=TRUE))
+barplot(ratios, xlab="mean normalized count", ylab="ratio of small p values")
+
+library("AnnotationDbi")
+library("org.Hs.eg.db")
+
+columns(org.Hs.eg.db)
+
+keytypes(org.Hs.eg.db)
+head(keys(org.Hs.eg.db,keytype="ENSEMBL"))
+
+row.names(res) <- lapply(row.names(res),  sub, pattern = "\\.\\d+$", replacement = "")
+
+res$symbol <- mapIds(org.Hs.eg.db,
+		        keys = row.names(res),
+		        column="SYMBOL",
+		        keytype="ENSEMBL",
+		        multiVals="first")
+res$gene.type <- mapIds(org.Hs.eg.db,
+		        keys=row.names(res),
+		        column="GENETYPE",
+		        keytype="ENSEMBL",
+		        multiVals="first")
+
+res$entrezID <- mapIds(org.Hs.eg.db,
+		        keys=row.names(res),
+		        column="ENTREZID",
+		        keytype="ENSEMBL",
+		        multiVals="first")
+
+resOrdered <- res[order(res$padj),]
+head(resOrdered)
+
+resOrderedDF <- as.data.frame(resOrdered)
+grep(resOrderedDF,pattern="NR4A1")
+
+write.csv(resOrderedDF, file="results/DEG/48h_DEGs_results.csv")
+
+library("ReportingTools")
+htmlRep <- HTMLReport(shortName="results/DEG/MALAT1_DEGs_report", title="MALAT1 DEGs",
+		        reportDirectory="results/DEG/20221218_DEGs_report")
+publish(resOrderedDF, htmlRep)
+url <- finish(htmlRep)
+browseURL(url)
+```
+
