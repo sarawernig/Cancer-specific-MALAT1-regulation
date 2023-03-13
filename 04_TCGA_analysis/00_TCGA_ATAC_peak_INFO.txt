@@ -1,0 +1,5 @@
+######## TCGA_ATAC_peak_Log2Counts_dedup_sample #######
+
+obtained from https://xenabrowser.net/datapages/?dataset=TCGA_ATAC_peak_Log2Counts_dedup_sample&host=https%3A%2F%2Fatacseq.xenahubs.net&removeHub=https%3A%2F%2Fxena.treehouse.gi.ucsc.edu%3A443
+
+Normalized count matrix: a prior count of 5 is added to the raw counts, then put into a "counts per million", then log2 transformed, then quantile normalized, the result is TCGA_ATAC_Log2Counts_Matrix.180608.txt.gz. We downloaded TCGA_ATAC_Log2Counts_Matrix.180608.txt.gz from synapse, averaged the values in the file (i.e. log2((count+5)PM)-qn values) across all technical replicates and all biospecimens belong to the same TCGA sample. The result is the genomic matrix TCGA_ATAC_peak_Log2Counts_dedup_sample. Peak location information is from file TCGA_ATAC_Log2Counts_Matrix.180608.txt.gz. Peak to gene mapping is defined as all peaks whose summit locates within 500kb from a gene's TSS sites.
